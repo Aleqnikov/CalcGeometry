@@ -119,7 +119,13 @@ void BaseController::clearScene()
 
 void BaseController::fitViewToContent()
 {
-    if (!scene_->items().isEmpty()) {
-        view_->fitInView(scene_->itemsBoundingRect(), Qt::KeepAspectRatio);
+    QRectF rect;
+    for (auto item : scene_->items()) {
+        if (item->zValue() < 100) { // или item != indicator_
+            rect |= item->sceneBoundingRect();
+        }
+    }
+    if (!rect.isNull()) {
+        view_->fitInView(rect, Qt::KeepAspectRatio);
     }
 }

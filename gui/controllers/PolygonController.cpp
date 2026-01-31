@@ -40,8 +40,6 @@ void PolygonController::draw()
     drawPolygon(vertices, pen, Qt::NoBrush);
 
 
-
-    fitViewToContent();
     // Метки вершин
     drawVertexLabels();
 
