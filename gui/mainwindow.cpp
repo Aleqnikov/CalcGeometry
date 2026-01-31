@@ -1,307 +1,134 @@
-#include "mainwindow.h"
-
-#include "NavigationView.h"
-#include "PolygonController.h"
-#include "HullController.h"
+#include "MainWindow.h"
+#include "dialogs/PolygonSettingsDialog.h"
+#include "dialogs/HullSettingsDialog.h"
+#include "dialogs/TriangulationSettingsDialog.h"
+#include "dialogs/DiameterSettingsDialog.h"
+#include "dialogs/RectangleSettingsDialog.h"
+#include "dialogs/CircleSettingsDialog.h"
+#include "views/VisualizationWidget.h"
+#include "controllers/PolygonController.h"
+#include "controllers/HullController.h"
+#include "controllers/TriangulationController.h"
+#include "controllers/DiameterController.h"
+#include "controllers/RectangleController.h"
+#include "controllers/CircleController.h"
 #include "jsonparcer.h"
-#include "TriangulationController.h"
-#include "RectangleController.h"
-
 
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QLabel>
-#include <QGroupBox>
-#include <QSpinBox>
-#include <QComboBox>
 #include <QFileDialog>
 #include <QMessageBox>
 
-
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
-
-    stack = new QStackedWidget(this);
-    setCentralWidget(stack);
+    stack_ = new QStackedWidget(this);
+    setCentralWidget(stack_);
     setMinimumSize(1000, 700);
     setWindowTitle(tr("Вычислительная Геометрия"));
 
     createStartMenu();
 }
 
-
 void MainWindow::createStartMenu()
 {
-    QWidget *container = new QWidget(stack);
-
+    QWidget *container = new QWidget(stack_);
     QVBoxLayout *mainLayout = new QVBoxLayout();
-
     mainLayout->setContentsMargins(80, 60, 80, 60);
     mainLayout->setSpacing(30);
 
     QLabel *titleLabel = new QLabel(tr("Вычислительная геометрия"), container);
-
     mainLayout->addWidget(titleLabel);
     mainLayout->addStretch();
 
-    auto *btnPol = new QPushButton("Точка внутри полигона");
-    connect(btnPol, &QPushButton::clicked, this, &MainWindow::PolygonSettings);
+    // Структура для упрощения создания кнопок меню
+    struct MenuItem {
+        QString text;
+        void (MainWindow::*slot)();
+    };
 
-    auto *btnConHul = new QPushButton("Построение выпуклой оболочки");
-    connect(btnConHul, &QPushButton::clicked, this, &MainWindow::ConvexHullSettings);
+    const QList<MenuItem> menuItems = {
+        {tr("Точка внутри полигона"), &MainWindow::showPolygonSettings},
+        {tr("Построение выпуклой оболочки"), &MainWindow::showHullSettings},
+        {tr("Триангуляция"), &MainWindow::showTriangulationSettings},
+        {tr("Диаметр"), &MainWindow::showDiameterSettings},
+        {tr("Прямоугольник"), &MainWindow::showRectangleSettings},
+        {tr("Круг"), &MainWindow::showCircleSettings}
+    };
 
-    auto *btnTriang = new QPushButton("Триангуляция");
-    connect(btnTriang, &QPushButton::clicked, this, &MainWindow::TriangulationSettings);
-
-    auto *btnDiam = new QPushButton("Диаметр");
-    connect(btnDiam, &QPushButton::clicked, this, &MainWindow::DiameterSettings);
-
-    auto *btnRect= new QPushButton("Прямоугольник");
-    connect(btnRect, &QPushButton::clicked, this, &MainWindow::RectangleSettings);
-
-    auto *btnCirc= new QPushButton("Круг");
-    connect(btnCirc, &QPushButton::clicked, this, &MainWindow::CircleSettings);
-
-    mainLayout->addWidget(btnPol);
-    mainLayout->addWidget(btnConHul);
-    mainLayout->addWidget(btnTriang);
-    mainLayout->addWidget(btnDiam);
-    mainLayout->addWidget(btnRect);
-    mainLayout->addWidget(btnCirc);
-
+    for (const auto& item : menuItems) {
+        auto *btn = new QPushButton(item.text, container);
+        connect(btn, &QPushButton::clicked, this, item.slot);
+        mainLayout->addWidget(btn);
+    }
 
     container->setLayout(mainLayout);
-    stack->insertWidget(0, container);
+    stack_->insertWidget(static_cast<int>(PageIndex::MainMenu), container);
 }
 
-
-void MainWindow::PolygonSettings()
+void MainWindow::showSettings(QWidget* settingsDialog)
 {
-    QWidget *page = new QWidget();
+    stack_->insertWidget(static_cast<int>(PageIndex::Settings), settingsDialog);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Settings));
+}
 
-    QVBoxLayout *mainLayout = new QVBoxLayout(page);
+void MainWindow::returnToMainMenu()
+{
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::MainMenu));
+}
 
+// === SETTINGS SLOTS ===
 
-    QLabel *titleLabel = new QLabel(tr("Точка внутри многоугольника"), page);
+void MainWindow::showPolygonSettings()
+{
+    auto *dialog = new PolygonSettingsDialog();
 
-    titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(titleLabel);
+    connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
+        const int n = dialog->getVertexCount();
+        const QString type = dialog->getPolygonType();
 
-    mainLayout->addStretch();
-
-    QGroupBox *paramGroup = new QGroupBox(tr("Параметры"), page);
-
-
-    QVBoxLayout *groupLayout = new QVBoxLayout(paramGroup);
-
-    QLabel *countLabel = new QLabel(tr("Количество вершин:"), paramGroup);
-    groupLayout->addWidget(countLabel);
-
-    QSpinBox *spin = new QSpinBox(paramGroup);
-    spin->setRange(3, 10000);
-    spin->setValue(10);
-
-    groupLayout->addWidget(spin);
-
-    QLabel *modeLabel = new QLabel(tr("Тип многоугольника:"), paramGroup);
-    groupLayout->addWidget(modeLabel);
-
-    QComboBox *combo = new QComboBox(paramGroup);
-    combo->addItems({tr("Выпуклый"), tr("Звёздчатый"), tr("Обычный")});
-
-    groupLayout->addWidget(combo);
-
-    paramGroup->setLayout(groupLayout);
-    mainLayout->addWidget(paramGroup);
-
-    mainLayout->addStretch();
-
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-
-
-    QPushButton *confirm = new QPushButton(tr("Создать"), page);
-
-    confirm->setCursor(Qt::PointingHandCursor);
-
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(confirm);
-
-    mainLayout->addLayout(buttonLayout);
-
-    page->setLayout(mainLayout);
-    stack->insertWidget(1, page);
-    stack->setCurrentIndex(1);
-
-    connect(confirm, &QPushButton::clicked, this, [this, spin, combo]() {
-        const int n = spin->value();
-
-        // Инициализируем пустым состоянием
         PolygonVariant polygon = CalcGeometryApi::CreatrePolygon(n);
 
-        const QString choice = combo->currentText();
-        if (choice == tr("Выпуклый"))
+        if (type == tr("Выпуклый"))
             polygon = CalcGeometryApi::CreatreConvexPolygon(n);
-        else if (choice == tr("Звёздчатый"))
+        else if (type == tr("Звёздчатый"))
             polygon = CalcGeometryApi::CreatreStarPolygon(n);
-
 
         showPolygonVisualization(polygon);
     });
 
-
+    showSettings(dialog);
 }
 
-void MainWindow::ConvexHullSettings()
+void MainWindow::showHullSettings()
 {
-    QWidget *page = new QWidget();
+    auto *dialog = new HullSettingsDialog();
 
-    QVBoxLayout *mainLayout = new QVBoxLayout(page);
+    connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
+        const int n = dialog->getVertexCount();
+        const bool useAndrew = dialog->useAndrewAlgorithm();
 
-
-    QLabel *titleLabel = new QLabel(tr("Построение выпуклой оболочки"), page);
-
-    titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(titleLabel);
-
-    mainLayout->addStretch();
-
-    QGroupBox *paramGroup = new QGroupBox(tr("Параметры"), page);
-
-
-    QVBoxLayout *groupLayout = new QVBoxLayout(paramGroup);
-
-    QLabel *countLabel = new QLabel(tr("Количество вершин:"), paramGroup);
-    groupLayout->addWidget(countLabel);
-
-    QSpinBox *spin = new QSpinBox(paramGroup);
-    spin->setRange(3, 10000);
-    spin->setValue(10);
-
-    groupLayout->addWidget(spin);
-
-    QLabel *modeLabel = new QLabel(tr("Алгоритм"), paramGroup);
-    groupLayout->addWidget(modeLabel);
-
-    QComboBox *combo = new QComboBox(paramGroup);
-    combo->addItems({tr("Джарвис"), tr("Андрюс")});
-
-    groupLayout->addWidget(combo);
-
-    paramGroup->setLayout(groupLayout);
-    mainLayout->addWidget(paramGroup);
-
-    mainLayout->addStretch();
-
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-
-
-    QPushButton *confirm = new QPushButton(tr("Создать"), page);
-
-    confirm->setCursor(Qt::PointingHandCursor);
-
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(confirm);
-
-    mainLayout->addLayout(buttonLayout);
-
-    page->setLayout(mainLayout);
-    stack->insertWidget(1, page);
-    stack->setCurrentIndex(1);
-
-    connect(confirm, &QPushButton::clicked, this, [this, spin, combo]() {
-        const int n = spin->value();
-
-        // Инициализируем пустым состоянием
-        Hull mesh = CalcGeometryApi::CreateHull(n);
-
-
-        bool mod = true;
-
-        const QString choice = combo->currentText();
-
-        if (choice == tr("Джарвис"))
-            mod = false;
-
-
-        showHullVisualization(mesh, mod);
+        Hull hull = CalcGeometryApi::CreateHull(n);
+        showHullVisualization(hull, useAndrew);
     });
+
+    showSettings(dialog);
 }
 
-void MainWindow::TriangulationSettings()
+void MainWindow::showTriangulationSettings()
 {
-    QWidget *page = new QWidget();
+    auto *dialog = new TriangulationSettingsDialog();
 
-    QVBoxLayout *mainLayout = new QVBoxLayout(page);
-
-    QLabel *titleLabel = new QLabel(tr("Триангуляция полигона"), page);
-    titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(titleLabel);
-
-    mainLayout->addStretch();
-
-    QGroupBox *paramGroup = new QGroupBox(tr("Параметры"), page);
-
-    QVBoxLayout *groupLayout = new QVBoxLayout(paramGroup);
-
-    QLabel *countLabel = new QLabel(tr("Количество вершин:"), paramGroup);
-    groupLayout->addWidget(countLabel);
-
-    QSpinBox *spin = new QSpinBox(paramGroup);
-    spin->setRange(3, 10000);
-    spin->setValue(12);
-    groupLayout->addWidget(spin);
-
-    QLabel *modeLabel = new QLabel(tr("Метод или источник:"), paramGroup);
-    groupLayout->addWidget(modeLabel);
-
-    QComboBox *combo = new QComboBox(paramGroup);
-    combo->addItems({tr("Сгенерировать"), tr("Загрузить JSON")});
-    groupLayout->addWidget(combo);
-
-    paramGroup->setLayout(groupLayout);
-    mainLayout->addWidget(paramGroup);
-
-    mainLayout->addStretch();
-
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-
-    QPushButton *confirm = new QPushButton(tr("Создать"), page);
-    confirm->setCursor(Qt::PointingHandCursor);
-
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(confirm);
-
-    mainLayout->addLayout(buttonLayout);
-
-    page->setLayout(mainLayout);
-    stack->insertWidget(1, page);
-    stack->setCurrentIndex(1);
-
-    connect(confirm, &QPushButton::clicked, this, [this, spin, combo]() {
-        const int n = spin->value();
-        const QString choice = combo->currentText();
-
+    connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
         std::vector<Point2D> vertices;
 
-        if (choice == tr("Сгенерировать")) {
+        if (dialog->shouldLoadFromJSON()) {
+            vertices = loadVerticesFromJSON();
+            if (vertices.empty()) return;
+        } else {
+            const int n = dialog->getVertexCount();
             Polygon poly = CalcGeometryApi::CreatrePolygon(n);
             vertices = poly.vertices;
-        }
-        else if (choice == tr("Загрузить JSON")) {
-            QString file = QFileDialog::getOpenFileName(this, tr("Открыть JSON"), "", "*.json");
-            if (file.isEmpty()) return;
-
-            QList<QPointF> qpoints = ContourJsonLoader::load(file);
-
-            if (qpoints.size() < 3) {
-                QMessageBox::warning(this, tr("Ошибка"), tr("В файле слишком мало точек!"));
-                return;
-            }
-
-            for (const auto &p : qpoints) {
-                vertices.emplace_back(p.x(), p.y());
-            }
         }
 
         if (!vertices.empty()) {
@@ -309,362 +136,150 @@ void MainWindow::TriangulationSettings()
             showTriangulationVisualization(vertices, triangles);
         }
     });
+
+    showSettings(dialog);
 }
 
-void MainWindow::DiameterSettings()
+void MainWindow::showDiameterSettings()
 {
-    QWidget *page = new QWidget();
+    auto *dialog = new DiameterSettingsDialog();
 
-    QVBoxLayout *mainLayout = new QVBoxLayout(page);
-
-
-    QLabel *titleLabel = new QLabel(tr("Нахождение диаметра множества"), page);
-    titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(titleLabel);
-
-    mainLayout->addStretch();
-
-    QGroupBox *paramGroup = new QGroupBox(tr("Параметры"), page);
-    QVBoxLayout *groupLayout = new QVBoxLayout(paramGroup);
-
-    QLabel *countLabel = new QLabel(tr("Количество точек:"), paramGroup);
-    groupLayout->addWidget(countLabel);
-
-    QSpinBox *spin = new QSpinBox(paramGroup);
-    spin->setRange(2, 10000);
-    spin->setValue(200);
-    groupLayout->addWidget(spin);
-
-    QLabel *modeLabel = new QLabel(tr("Алгоритм:"), paramGroup);
-    groupLayout->addWidget(modeLabel);
-
-    QComboBox *combo = new QComboBox(paramGroup);
-    combo->addItems({
-        tr("Наивный (O(n^2))"),
-        tr("Rotating Calipers"),
-        tr("Сравнение (оба)")
-    });
-    groupLayout->addWidget(combo);
-
-    paramGroup->setLayout(groupLayout);
-    mainLayout->addWidget(paramGroup);
-
-    mainLayout->addStretch();
-
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->setSpacing(20);
-
-    QPushButton *confirm = new QPushButton(tr("Создать"), page);
-    confirm->setCursor(Qt::PointingHandCursor);
-
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(confirm);
-
-    mainLayout->addLayout(buttonLayout);
-
-    page->setLayout(mainLayout);
-    stack->insertWidget(1, page);
-    stack->setCurrentIndex(1);
-
-    connect(confirm, &QPushButton::clicked, this, [this, spin, combo]() {
-        const int n = spin->value();
-        const QString choice = combo->currentText();
-
-        DiameterController::Mode mode;
-
-        if (choice == tr("Наивный (O(n^2))")) {
-            mode = DiameterController::Naive;
-        } else if (choice == tr("Rotating Calipers (требует оболочку)")) {
-            mode = DiameterController::Calipers;
-        } else {
-            mode = DiameterController::CompareBoth; // Для "Полный" или "Сравнение"
-        }
-
+    connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
+        const int n = dialog->getPointCount();
+        const auto mode = dialog->getMode();
         showDiameterVisualization(n, mode);
     });
+
+    showSettings(dialog);
 }
 
-void MainWindow::RectangleSettings()
+void MainWindow::showRectangleSettings()
 {
-    QWidget *page = new QWidget();
-    QVBoxLayout *mainLayout = new QVBoxLayout(page);
+    auto *dialog = new RectangleSettingsDialog();
 
-
-    QLabel *titleLabel = new QLabel(tr("Минимальный ограничивающий прямоугольник"), page);
-    titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(titleLabel);
-
-    mainLayout->addStretch();
-
-    QGroupBox *paramGroup = new QGroupBox(tr("Параметры"), page);
-    QVBoxLayout *groupLayout = new QVBoxLayout(paramGroup);
-
-    QLabel *countLabel = new QLabel(tr("Количество точек:"), paramGroup);
-    groupLayout->addWidget(countLabel);
-
-    QSpinBox *spin = new QSpinBox(paramGroup);
-    spin->setRange(3, 10000);
-    spin->setValue(100);
-    groupLayout->addWidget(spin);
-
-    paramGroup->setLayout(groupLayout);
-    mainLayout->addWidget(paramGroup);
-
-    mainLayout->addStretch();
-
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    QPushButton *confirm = new QPushButton(tr("Создать"), page);
-    confirm->setCursor(Qt::PointingHandCursor);
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(confirm);
-    mainLayout->addLayout(buttonLayout);
-
-    page->setLayout(mainLayout);
-    stack->insertWidget(1, page);
-    stack->setCurrentIndex(1);
-
-    connect(confirm, &QPushButton::clicked, this, [this, spin]() {
-        const int n = spin->value();
+    connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
+        const int n = dialog->getPointCount();
         showRectangleVisualization(n);
     });
+
+    showSettings(dialog);
 }
 
-void MainWindow::CircleSettings()
+void MainWindow::showCircleSettings()
 {
-    QWidget *page = new QWidget();
-    QVBoxLayout *mainLayout = new QVBoxLayout(page);
-    mainLayout->setContentsMargins(80, 60, 80, 60);
-    mainLayout->setSpacing(25);
+    auto *dialog = new CircleSettingsDialog();
 
-    QLabel *titleLabel = new QLabel(tr("Минимальная ограничивающая окружность"), page);
-    titleLabel->setAlignment(Qt::AlignCenter);
-    mainLayout->addWidget(titleLabel);
-
-    mainLayout->addStretch();
-
-    QGroupBox *paramGroup = new QGroupBox(tr("Параметры"), page);
-    QVBoxLayout *groupLayout = new QVBoxLayout(paramGroup);
-    groupLayout->setSpacing(18);
-
-    QLabel *countLabel = new QLabel(tr("Количество точек:"), paramGroup);
-    groupLayout->addWidget(countLabel);
-
-    QSpinBox *spin = new QSpinBox(paramGroup);
-    spin->setRange(1, 10000);
-    spin->setValue(200);
-    groupLayout->addWidget(spin);
-
-    QLabel *modeLabel = new QLabel(tr("Алгоритм:"), paramGroup);
-    groupLayout->addWidget(modeLabel);
-
-    QComboBox *combo = new QComboBox(paramGroup);
-    combo->addItems({ tr("Наивный (перебор)"), tr("Welzl (рандомизированный)"), tr("Сравнить оба") });
-    groupLayout->addWidget(combo);
-
-    paramGroup->setLayout(groupLayout);
-    mainLayout->addWidget(paramGroup);
-
-    mainLayout->addStretch();
-
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    QPushButton *confirm = new QPushButton(tr("Создать"), page);
-    confirm->setCursor(Qt::PointingHandCursor);
-    buttonLayout->addStretch();
-    buttonLayout->addWidget(confirm);
-    mainLayout->addLayout(buttonLayout);
-
-    page->setLayout(mainLayout);
-    stack->insertWidget(1, page);
-    stack->setCurrentIndex(1);
-
-    connect(confirm, &QPushButton::clicked, this, [this, spin, combo]() {
-        const int n = spin->value();
-        const QString choice = combo->currentText();
-
-        CircleController::Mode mode;
-        if (choice.contains("Наивный")) mode = CircleController::Naive;
-        else if (choice.contains("Welzl")) mode = CircleController::Welzl;
-        else mode = CircleController::CompareBoth;
-
+    connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
+        const int n = dialog->getPointCount();
+        const auto mode = dialog->getMode();
         showCircleVisualization(n, mode);
     });
+
+    showSettings(dialog);
 }
+
+// === VISUALIZATION SLOTS ===
 
 void MainWindow::showPolygonVisualization(const PolygonVariant& polygon)
 {
-    QWidget *container = new QWidget();
-    QVBoxLayout *layout = new QVBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    auto *widget = new VisualizationWidget();
+    new PolygonController(widget->view(), widget->scene(), polygon);
+    widget->addBackButton();
+    widget->finalizeSetup();
 
-    QGraphicsScene *scene = new QGraphicsScene();
-    NavigationView *view = new NavigationView(scene);
-    view->setSceneRect(-1000000, -1000000, 2000000, 2000000);
-    view->scale(1, -1);
+    connect(widget, &VisualizationWidget::backPressed, this, &MainWindow::returnToMainMenu);
 
-    new PolygonController(view, scene, polygon);
-
-    layout->addWidget(view);
-
-    // Кнопка назад
-    QPushButton *backBtn = new QPushButton(tr("Назад"), container);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    connect(backBtn, &QPushButton::clicked, this, [this](){ stack->setCurrentIndex(0); });
-    layout->addWidget(backBtn);
-
-    stack->insertWidget(2, container);
-    stack->setCurrentIndex(2);
-
-    view->fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
-    view->setFocus();
+    stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
 }
 
-
-void MainWindow::showHullVisualization(Hull mesh, bool mod)
+void MainWindow::showHullVisualization(Hull hull, bool useAndrew)
 {
-    QWidget *container = new QWidget();
-    QVBoxLayout *layout = new QVBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    auto *widget = new VisualizationWidget();
+    new HullController(widget->view(), widget->scene(), std::move(hull), useAndrew);
+    widget->addBackButton();
+    widget->finalizeSetup();
 
-    QGraphicsScene *scene = new QGraphicsScene();
-    NavigationView *view = new NavigationView(scene);
+    connect(widget, &VisualizationWidget::backPressed, this, &MainWindow::returnToMainMenu);
 
-    // Настраиваем бесконечную сцену
-    view->setSceneRect(-1000000, -1000000, 2000000, 2000000);
-    // Инвертируем Y, чтобы координаты шли вверх, как в математике
-    view->scale(1, -1);
-
-    // Создаем наш новый контроллер для оболочки
-    // Он сам все нарисует при создании
-    new HullController(view, scene, std::move(mesh), mod);
-
-    layout->addWidget(view);
-
-    // Кнопка назад
-    QPushButton *backBtn = new QPushButton(tr("Назад"), container);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    connect(backBtn, &QPushButton::clicked, this, [this](){ stack->setCurrentIndex(0); });
-    layout->addWidget(backBtn);
-
-    stack->insertWidget(2, container);
-    stack->setCurrentIndex(2);
-
-    // Центрируем камеру на точках
-    view->fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
-    view->setFocus();
+    stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
 }
-
 
 void MainWindow::showTriangulationVisualization(const std::vector<Point2D>& vertices,
                                                 const std::vector<Triangle>& triangles)
 {
-    QWidget *container = new QWidget();
-    QVBoxLayout *layout = new QVBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    auto *widget = new VisualizationWidget();
+    new TriangulationController(widget->view(), widget->scene(), vertices, triangles);
+    widget->addBackButton();
+    widget->finalizeSetup();
 
-    QGraphicsScene *scene = new QGraphicsScene();
-    NavigationView *view = new NavigationView(scene);
-    view->setSceneRect(-1000000, -1000000, 2000000, 2000000);
-    view->scale(1, -1);
+    connect(widget, &VisualizationWidget::backPressed, this, &MainWindow::returnToMainMenu);
 
-    // Контроллер сам все отрисует
-    new TriangulationController(view, scene, vertices, triangles);
-
-    layout->addWidget(view);
-
-    // Кнопка назад в твоем стиле
-    QPushButton *backBtn = new QPushButton(tr("Назад"), container);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    connect(backBtn, &QPushButton::clicked, this, [this](){ stack->setCurrentIndex(0); });
-    layout->addWidget(backBtn);
-
-    stack->insertWidget(2, container);
-    stack->setCurrentIndex(2);
-
-    view->fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
-    view->setFocus();
+    stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
 }
 
-
-void MainWindow::showDiameterVisualization(int n, DiameterController::Mode mode)
+void MainWindow::showDiameterVisualization(int n, int mode)
 {
-    QWidget *container = new QWidget();
-    QVBoxLayout *layout = new QVBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    auto *widget = new VisualizationWidget();
+    new DiameterController(widget->view(), widget->scene(), n,
+                           static_cast<DiameterController::Mode>(mode));
+    widget->addBackButton();
+    widget->finalizeSetup();
 
-    QGraphicsScene *scene = new QGraphicsScene();
-    NavigationView *view = new NavigationView(scene);
-    view->setSceneRect(-1000000, -1000000, 2000000, 2000000);
-    view->scale(1, -1);
+    connect(widget, &VisualizationWidget::backPressed, this, &MainWindow::returnToMainMenu);
 
-    // Передаем выбранный режим в контроллер
-    new DiameterController(view, scene, n, mode);
-
-    layout->addWidget(view);
-
-    QPushButton *backBtn = new QPushButton(tr("Назад"), container);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    connect(backBtn, &QPushButton::clicked, this, [this](){ stack->setCurrentIndex(0); });
-    layout->addWidget(backBtn);
-
-    stack->insertWidget(2, container);
-    stack->setCurrentIndex(2);
-
-    view->fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
-    view->setFocus();
+    stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
 }
 
 void MainWindow::showRectangleVisualization(int n)
 {
-    QWidget *container = new QWidget();
-    QVBoxLayout *layout = new QVBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    auto *widget = new VisualizationWidget();
+    new RectangleController(widget->view(), widget->scene(), n);
+    widget->addBackButton();
+    widget->finalizeSetup();
 
-    QGraphicsScene *scene = new QGraphicsScene();
-    NavigationView *view = new NavigationView(scene);
-    view->setSceneRect(-1000000, -1000000, 2000000, 2000000);
-    view->scale(1, -1);
+    connect(widget, &VisualizationWidget::backPressed, this, &MainWindow::returnToMainMenu);
 
-    // Создаем контроллер, передаем количество точек
-    new RectangleController(view, scene, n);
-
-    layout->addWidget(view);
-
-    QPushButton *backBtn = new QPushButton(tr("Назад"), container);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    connect(backBtn, &QPushButton::clicked, this, [this](){ stack->setCurrentIndex(0); });
-    layout->addWidget(backBtn);
-
-    stack->insertWidget(2, container);
-    stack->setCurrentIndex(2);
-
-    view->fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
-    view->setFocus();
+    stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
 }
 
-void MainWindow::showCircleVisualization(int n, CircleController::Mode mode)
+void MainWindow::showCircleVisualization(int n, int mode)
 {
-    QWidget *container = new QWidget();
-    QVBoxLayout *layout = new QVBoxLayout(container);
-    layout->setContentsMargins(0, 0, 0, 0);
+    auto *widget = new VisualizationWidget();
+    new CircleController(widget->view(), widget->scene(), n,
+                         static_cast<CircleController::Mode>(mode));
+    widget->addBackButton();
+    widget->finalizeSetup();
 
-    QGraphicsScene *scene = new QGraphicsScene();
-    NavigationView *view = new NavigationView(scene);
-    view->setSceneRect(-1000000, -1000000, 2000000, 2000000);
-    view->scale(1, -1);
+    connect(widget, &VisualizationWidget::backPressed, this, &MainWindow::returnToMainMenu);
 
-    // Контроллер запускает всю магию
-    new CircleController(view, scene, n, mode);
+    stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
+}
 
-    layout->addWidget(view);
+// === HELPER METHODS ===
 
-    QPushButton *backBtn = new QPushButton(tr("Назад"), container);
-    backBtn->setCursor(Qt::PointingHandCursor);
-    connect(backBtn, &QPushButton::clicked, this, [this](){ stack->setCurrentIndex(0); });
-    layout->addWidget(backBtn);
+std::vector<Point2D> MainWindow::loadVerticesFromJSON()
+{
+    QString file = QFileDialog::getOpenFileName(this, tr("Открыть JSON"), "", "*.json");
+    if (file.isEmpty()) return {};
 
-    stack->insertWidget(2, container);
-    stack->setCurrentIndex(2);
+    QList<QPointF> qpoints = ContourJsonLoader::load(file);
 
-    view->fitInView(scene->itemsBoundingRect(), Qt::KeepAspectRatio);
-    view->setFocus();
+    if (qpoints.size() < 3) {
+        QMessageBox::warning(this, tr("Ошибка"), tr("В файле слишком мало точек!"));
+        return {};
+    }
+
+    std::vector<Point2D> vertices;
+    vertices.reserve(qpoints.size());
+    for (const auto &p : qpoints) {
+        vertices.emplace_back(p.x(), p.y());
+    }
+
+    return vertices;
 }

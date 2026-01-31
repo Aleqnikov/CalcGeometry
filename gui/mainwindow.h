@@ -2,56 +2,46 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-
 #include <QStackedWidget>
-
-
+#include <vector>
 #include "../lib/api/GeometryApi.h"
-#include "DiameterController.h"
-#include "CircleController.h"
 
 using PolygonVariant = std::variant<Polygon, ConvexPolygon, StarPolygon>;
 
-QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
-QT_END_NAMESPACE
-
-class MainWindow : public QMainWindow
-{
+class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override = default;
+    explicit MainWindow(QWidget *parent = nullptr);
 
-private:
-    Ui::MainWindow *ui;
+private slots:
+    // Settings screens
+    void showPolygonSettings();
+    void showHullSettings();
+    void showTriangulationSettings();
+    void showDiameterSettings();
+    void showRectangleSettings();
+    void showCircleSettings();
 
-    QStackedWidget* stack;
-
-    void createStartMenu();
-
-    void PolygonSettings();
-    void ConvexHullSettings();
-    void TriangulationSettings();
-    void DiameterSettings();
-    void RectangleSettings();
-    void CircleSettings();
-
+    // Visualization screens
     void showPolygonVisualization(const PolygonVariant& polygon);
-    void showHullVisualization(Hull mesh, bool mod);
+    void showHullVisualization(Hull hull, bool useAndrew);
     void showTriangulationVisualization(const std::vector<Point2D>& vertices,
                                         const std::vector<Triangle>& triangles);
+    void showDiameterVisualization(int n, int mode);
+    void showRectangleVisualization(int n);
+    void showCircleVisualization(int n, int mode);
 
+    void returnToMainMenu();
 
+private:
+    void createStartMenu();
+    void showSettings(QWidget* settingsDialog);
+    std::vector<Point2D> loadVerticesFromJSON();
 
+    enum class PageIndex { MainMenu = 0, Settings = 1, Visualization = 2 };
 
-    void showDiameterVisualization(int n, DiameterController::Mode mode);
-    void showRectangleVisualization(int n_);
-
-    void showCircleVisualization(int n, CircleController::Mode mode);
-
+    QStackedWidget *stack_;
 };
-#endif // MAINWINDOW_H
+
+#endif

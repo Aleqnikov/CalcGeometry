@@ -12,8 +12,23 @@ INCLUDEPATH += . \
 
 # 2. Все файлы реализации (именно их не хватало линковщику)
 SOURCES += \
+    controllers/BaseController.cpp \
+    controllers/CircleController.cpp \
+    controllers/DiameterController.cpp \
+    controllers/HullController.cpp \
+    controllers/PolygonController.cpp \
+    controllers/RectangleController.cpp \
+    controllers/TriangulationController.cpp \
+    views/VisualizationWidget.cpp \
+    dialogs/CircleSettingsDialog.cpp \
+    dialogs/DiameterSettingsDialog.cpp \
+    dialogs/HullSettingsDialogttingsdialog.cpp \
+    dialogs/PolygonSettingsDialog.cpp \
+    dialogs/TriangulationSettingsDialog.cpp \
     main.cpp \
     mainwindow.cpp \
+    dialogs/RectangleSettingsDialog.cpp \
+    dialogs/SettingsDialog.cpp \
     ../lib/api/GeometryApi.cpp \
     ../lib/src/linalgebra/LinAl.cpp \
     ../lib/src/geometry/polygons/core/Polygon.cpp \
@@ -29,21 +44,30 @@ SOURCES += \
 
 # 3. Заголовки (для удобства отображения в дереве проекта QT Creator)
 HEADERS += \
-    CircleController.h \
-    DiameterController.h \
-    HullController.h \
-    RectangleController.h \
-    TriangulationController.h \
+    controllers/BaseController.h \
+    dialogs/CircleSettingsDialog.h \
+    dialogs/DiameterSettingsDialog.h \
+    dialogs/HullSettingsDialog.h \
+    dialogs/PolygonSettingsDialog.h \
+    dialogs/RectangleSettingsDialog.h \
+    dialogs/SettingsDialog.h \
+    controllers/CircleController.h \
+    controllers/DiameterController.h \
+    controllers/HullController.h \
+    controllers/RectangleController.h \
+    controllers/TriangulationController.h \
+    dialogs/TriangulationSettingsDialog.h \
     jsonparcer.h \
     mainwindow.h \
-    PolygonController.h \
-    NavigationView.h \
+    controllers/PolygonController.h \
+    views/NavigationView.h \
     ../lib/api/GeometryApi.h \
     ../lib/src/linalgebra/Point2D.h \
     ../lib/src/linalgebra/LinAl.h \
     ../lib/src/geometry/polygons/core/Polygon.h \
     ../lib/src/geometry/polygons/core/ConvexPn.h \
-    ../lib/src/geometry/polygons/core/StarPn.h
+    ../lib/src/geometry/polygons/core/StarPn.h \
+    views/VisualizationWidget.h
 
 FORMS += \
     mainwindow.ui
