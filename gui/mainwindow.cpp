@@ -12,6 +12,9 @@
 #include "controllers/DiameterController.h"
 #include "controllers/RectangleController.h"
 #include "controllers/CircleController.h"
+
+#include "dialogs/DelaunaySettingsDialog.h"
+#include "controllers/DelaunayController.h"
 #include "jsonparcer.h"
 
 #include <QVBoxLayout>
@@ -52,7 +55,7 @@ void MainWindow::createStartMenu()
         {tr("Построение выпуклой оболочки"), &MainWindow::showHullSettings},
         {tr("Триангуляция"), &MainWindow::showTriangulationSettings},
         {tr("Диаметр"), &MainWindow::showDiameterSettings},
-        {tr("Прямоугольник"), &MainWindow::showRectangleSettings},
+{tr("Делоне / Вороной"), &MainWindow::showDelaunaySettings},        {tr("Прямоугольник"), &MainWindow::showRectangleSettings},
         {tr("Круг"), &MainWindow::showCircleSettings}
     };
 
@@ -78,6 +81,60 @@ void MainWindow::returnToMainMenu()
 }
 
 // === SETTINGS SLOTS ===
+
+void MainWindow::showDelaunaySettings()
+{
+	auto *dialog = new DelaunaySettingsDialog();
+
+	connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
+		std::vector<Point2D> vertices;
+
+		if (dialog->shouldLoadFromJSON()) {
+			vertices = loadVerticesFromJSON();
+			if (vertices.empty()) return;
+		} else {
+			const int n = dialog->getVertexCount();
+			Polygon poly = CalcGeometryApi::CreatrePolygon(n);
+			vertices = poly.vertices;
+		}
+
+		if (!vertices.empty()) {
+			// Вызываем ваш новый API метод триангуляции Делоне
+			auto triangles = CalcGeometryApi::Delane(vertices);
+			showDelaunayVisualization(vertices, triangles);
+		}
+	});
+
+	showSettings(dialog);
+}
+
+void MainWindow::showDelaunayVisualization(const std::vector<Point2D>& vertices,
+											const std::vector<Triangle>& triangles)
+{
+	auto *widget     = new VisualizationWidget();
+	auto *controller = new DelaunayController(
+		widget->view(), widget->scene(), vertices, triangles);
+
+	auto *toggleBtn = new QPushButton(tr("Показать Вороного"), widget);
+	toggleBtn->setCursor(Qt::PointingHandCursor);
+
+	connect(toggleBtn, &QPushButton::clicked, this, [controller, toggleBtn]() {
+		controller->toggleMode();
+		toggleBtn->setText(controller->isShowingVoronoi()
+						   ? tr("Показать Делоне")
+						   : tr("Показать Вороного"));
+	});
+
+	widget->addCustomButton(toggleBtn);
+	widget->addBackButton();
+	widget->finalizeSetup();
+
+	connect(widget, &VisualizationWidget::backPressed,
+			this, &MainWindow::returnToMainMenu);
+
+	stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+	stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
+}
 
 void MainWindow::showPolygonSettings()
 {

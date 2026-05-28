@@ -35,12 +35,18 @@ SOURCES += \
     ../lib/src/geometry/polygons/core/ConvexPn.cpp \
     ../lib/src/geometry/polygons/core/StarPn.cpp \
     ../lib/src/geometry/polygons/algorithms/point_in_polygon.cpp \
+    ../lib/src/geometry/delone/algorithm/Dcel.cpp\
+    ../lib/src/geometry/delone/algorithm/Delaunaytree.cpp\
+    ../lib/src/geometry/delone/algorithm/Delaunaytriangulation.cpp\
     ../lib/src/geometry/triangulation/algorithms/TriangulationAlgorithms.cpp \
     ../lib/src/geometry/boundingsets/algorithms/BoundingCircle.cpp \
     ../lib/src/geometry/boundingsets/algorithms/BoundingRectangle.cpp \
     ../lib/src/geometry/boundingsets/algorithms/DiameterAlgorithms.cpp \
     ../lib/src/geometry/convexhull/core/Hull.cpp \
-    ../lib/src/geometry/convexhull/algorithms/HullAlgorithms.cpp
+    ../lib/src/geometry/convexhull/algorithms/HullAlgorithms.cpp \
+    dialogs/DelaunaySettingsDialog.cpp \
+    controllers/DelaunayController.cpp \
+    ../lib/src/geometry/delone/algorithm/VoronoiFromDelaunay.cpp \
 
 # 3. Заголовки (для удобства отображения в дереве проекта QT Creator)
 HEADERS += \
@@ -67,7 +73,14 @@ HEADERS += \
     ../lib/src/geometry/polygons/core/Polygon.h \
     ../lib/src/geometry/polygons/core/ConvexPn.h \
     ../lib/src/geometry/polygons/core/StarPn.h \
-    views/VisualizationWidget.h
+    views/VisualizationWidget.h \
+    ../lib/src/geometry/delone/algorithm/Dcel.h\
+        ../lib/src/geometry/delone/algorithm/Delaunaytree.h\
+        ../lib/src/geometry/delone/algorithm/Delaunaytriangulation.h\
+    dialogs/DelaunaySettingsDialog.h \
+    controllers/DelaunayController.h \
+    ../lib/src/geometry/delone/algorithm/VoronoiFromDelaunay.h
+
 
 FORMS += \
     mainwindow.ui

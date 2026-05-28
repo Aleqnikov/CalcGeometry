@@ -6,6 +6,8 @@
 #include <vector>
 #include "../lib/api/GeometryApi.h"
 
+
+
 using PolygonVariant = std::variant<Polygon, ConvexPolygon, StarPolygon>;
 
 class MainWindow : public QMainWindow {
@@ -33,6 +35,8 @@ private slots:
     void showCircleVisualization(int n, int mode);
 
     void returnToMainMenu();
+	void showDelaunaySettings();
+	void showDelaunayVisualization(const std::vector<Point2D>& vertices, const std::vector<Triangle>& triangles);
 
 private:
     void createStartMenu();

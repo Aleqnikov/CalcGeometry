@@ -1,6 +1,8 @@
 #include "LinAl.h"
 
 
+
+
 double LinAl::pscalar(Point2D a, Point2D b) 
 {
 	return a.x * b.y - a.y * b.x;
@@ -49,3 +51,20 @@ double LinAl::dot(const Point2D& a, const Point2D& b)
 {
     return a.x * b.x + a.y * b.y;
 }
+
+bool LinAl::inCircle(const Point2D& a, const Point2D& b, const Point2D& c, const Point2D& p) {
+        double ax_ = a.x - p.x;
+        double ay_ = a.y - p.y;
+        double bx_ = b.x - p.x;
+        double by_ = b.y - p.y;
+        double cx_ = c.x - p.x;
+        double cy_ = c.y - p.y;
+
+        double det = (ax_*ax_ + ay_*ay_) * (bx_ * cy_ - cx_ * by_) -
+                     (bx_*bx_ + by_*by_) * (ax_ * cy_ - cx_ * ay_) +
+                     (cx_*cx_ + cy_*cy_) * (ax_ * by_ - bx_ * ay_);
+
+        // Если точки a, b, c заданы против часовой стрелки,
+        // положительный определитель означает, что p внутри окружности.
+        return det > 0;
+    }

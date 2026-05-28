@@ -3,34 +3,35 @@
 
 #include <QWidget>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QPushButton>
 #include <QGraphicsScene>
 #include "NavigationView.h"
 
 class VisualizationWidget : public QWidget {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    explicit VisualizationWidget(QWidget *parent = nullptr);
-    virtual ~VisualizationWidget() = default;
+	explicit VisualizationWidget(QWidget *parent = nullptr);
+	virtual ~VisualizationWidget() = default;
 
-    // Геттеры для доступа к view и scene
-    NavigationView* view() { return view_; }
-    QGraphicsScene* scene() { return scene_; }
+	NavigationView* view() { return view_; }
+	QGraphicsScene* scene() { return scene_; }
 
-    // Публичные методы настройки (вызываются из MainWindow)
-    void addBackButton();
-    void finalizeSetup();
+	void addBackButton();
+	void addCustomButton(QPushButton* btn);
+	void finalizeSetup();
+
+	signals:
+		void backPressed();
 
 protected:
-    void setupScene();  // Только это остается protected
+	void setupScene();
 
-    NavigationView *view_;
-    QGraphicsScene *scene_;
-    QVBoxLayout *mainLayout_;
-
-signals:
-    void backPressed();
+	NavigationView  *view_;
+	QGraphicsScene  *scene_;
+	QVBoxLayout     *mainLayout_;
+	QHBoxLayout     *buttonLayout_;
 };
 
 #endif

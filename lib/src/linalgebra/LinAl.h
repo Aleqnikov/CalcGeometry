@@ -34,6 +34,8 @@ namespace LinAl {
     bool isPointInTriangle(Point2D p, Point2D a, Point2D b, Point2D c);
 
     double dot(const Point2D& a, const Point2D& b);
+
+    bool inCircle(const Point2D& a, const Point2D& b, const Point2D& c, const Point2D& p);
 }
 
 
