@@ -3,50 +3,35 @@
 #include <limits>
 #include <cmath>
 
-// ---------------------------------------------------------------------------
-// signed_area2: знаковая площадь треугольника (a, b, p).
-// Положительна если CCW.
-// ---------------------------------------------------------------------------
+
 static double signed_area2(Point2D a, Point2D b, Point2D p) {
     return (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
 }
 
-// ---------------------------------------------------------------------------
-// point_in_node
-//
-// Строго по лекции:
-//   if n.v0.infinite:
-//       return orientation(n.v1, n.v2, p) == left
-//   return point_in_triangle(p, n.v0, n.v1, n.v2)
-//
+
 // Предполагается что бесконечная вершина, если есть, хранится в v0.
-// Это обеспечивается при вставке узлов в дерево (см. DelaunayTriangulation).
-// ---------------------------------------------------------------------------
+// Это обеспечивается при вставке узлов в дерево.
 bool DelaunayTree::point_in_node(Point2D p, size_t node_idx) const {
     const auto& nd = nodes_[node_idx];
 
     static constexpr double EPS = -1e-9;
 
     if (dcel_.is_infinite_vertex(nd.v0)) {
-        // Бесконечный треугольник: half-plane тест по конечному ребру v1->v2
-        Point2D a = dcel_.vertices[nd.v1].pos;
-        Point2D b = dcel_.vertices[nd.v2].pos;
+        Point2D a = dcel_.vertex_pos(nd.v1);
+        Point2D b = dcel_.vertex_pos(nd.v2);
         return signed_area2(a, b, p) >= EPS;
     }
 
-    // Конечный треугольник: три half-plane теста
-    Point2D a = dcel_.vertices[nd.v0].pos;
-    Point2D b = dcel_.vertices[nd.v1].pos;
-    Point2D c = dcel_.vertices[nd.v2].pos;
+    Point2D a = dcel_.vertex_pos(nd.v0);
+    Point2D b = dcel_.vertex_pos(nd.v1);
+    Point2D c = dcel_.vertex_pos(nd.v2);
 
     return signed_area2(a, b, p) >= EPS &&
            signed_area2(b, c, p) >= EPS &&
            signed_area2(c, a, p) >= EPS;
 }
 
-// ---------------------------------------------------------------------------
-// locate_from: спуск по DAG от node_idx
-// ---------------------------------------------------------------------------
+
 size_t DelaunayTree::locate_from(Point2D p, size_t node_idx) const {
     const auto& nd = nodes_[node_idx];
 
@@ -61,7 +46,6 @@ size_t DelaunayTree::locate_from(Point2D p, size_t node_idx) const {
         }
     }
 
-    // Fallback: числовой edge case — выбираем ребёнка где p наименее снаружи
     size_t best_child = INVALID;
     double best_score = -std::numeric_limits<double>::infinity();
 
@@ -70,13 +54,13 @@ size_t DelaunayTree::locate_from(Point2D p, size_t node_idx) const {
 
         double score;
         if (dcel_.is_infinite_vertex(cn.v0)) {
-            Point2D a = dcel_.vertices[cn.v1].pos;
-            Point2D b = dcel_.vertices[cn.v2].pos;
+            Point2D a = dcel_.vertex_pos(cn.v1);
+            Point2D b = dcel_.vertex_pos(cn.v2);
             score = signed_area2(a, b, p);
         } else {
-            Point2D a = dcel_.vertices[cn.v0].pos;
-            Point2D b = dcel_.vertices[cn.v1].pos;
-            Point2D c = dcel_.vertices[cn.v2].pos;
+            Point2D a = dcel_.vertex_pos(cn.v0);
+            Point2D b = dcel_.vertex_pos(cn.v1);
+            Point2D c = dcel_.vertex_pos(cn.v2);
             score = std::min({signed_area2(a, b, p),
                               signed_area2(b, c, p),
                               signed_area2(c, a, p)});
@@ -93,10 +77,6 @@ size_t DelaunayTree::locate_from(Point2D p, size_t node_idx) const {
 
     return INVALID;
 }
-
-// ---------------------------------------------------------------------------
-// Public interface
-// ---------------------------------------------------------------------------
 
 size_t DelaunayTree::make_root(size_t v0, size_t v1, size_t v2, size_t face) {
     size_t idx = nodes_.size();
@@ -135,7 +115,7 @@ size_t DelaunayTree::locate(Point2D p) const {
         }
     }
 
-    // Last resort: линейный поиск по листьям
+    // Линейный поиск по листьям
     size_t best_leaf = INVALID;
     double best_score = -std::numeric_limits<double>::infinity();
 
@@ -145,13 +125,13 @@ size_t DelaunayTree::locate(Point2D p) const {
 
         double score;
         if (dcel_.is_infinite_vertex(nd.v0)) {
-            Point2D a = dcel_.vertices[nd.v1].pos;
-            Point2D b = dcel_.vertices[nd.v2].pos;
+            Point2D a = dcel_.vertex_pos(nd.v1);
+            Point2D b = dcel_.vertex_pos(nd.v2);
             score = signed_area2(a, b, p);
         } else {
-            Point2D a = dcel_.vertices[nd.v0].pos;
-            Point2D b = dcel_.vertices[nd.v1].pos;
-            Point2D c = dcel_.vertices[nd.v2].pos;
+            Point2D a = dcel_.vertex_pos(nd.v0);
+            Point2D b = dcel_.vertex_pos(nd.v1);
+            Point2D c = dcel_.vertex_pos(nd.v2);
             score = std::min({signed_area2(a, b, p),
                               signed_area2(b, c, p),
                               signed_area2(c, a, p)});
