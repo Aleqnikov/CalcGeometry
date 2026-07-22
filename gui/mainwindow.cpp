@@ -84,56 +84,66 @@ void MainWindow::returnToMainMenu()
 
 void MainWindow::showDelaunaySettings()
 {
-	auto *dialog = new DelaunaySettingsDialog();
+    auto *dialog = new DelaunaySettingsDialog();
 
-	connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
-		std::vector<Point2D> vertices;
+    connect(dialog, &SettingsDialog::confirmed, this, [this, dialog]() {
+        std::vector<Point2D> vertices;
+        int vertexCount = 0; // По умолчанию 0 (для JSON)
 
-		if (dialog->shouldLoadFromJSON()) {
-			vertices = loadVerticesFromJSON();
-			if (vertices.empty()) return;
-		} else {
-			const int n = dialog->getVertexCount();
-			Polygon poly = CalcGeometryApi::CreatrePolygon(n);
-			vertices = poly.vertices;
-		}
+        if (dialog->shouldLoadFromJSON()) {
+            vertices = loadVerticesFromJSON();
+            if (vertices.empty()) return;
+        } else {
+        	vertexCount= dialog->getVertexCount();
 
-		if (!vertices.empty()) {
-			// Вызываем ваш новый API метод триангуляции Делоне
-			auto triangles = CalcGeometryApi::Delane(vertices);
-			showDelaunayVisualization(vertices, triangles);
-		}
-	});
 
-	showSettings(dialog);
+            auto poly = CalcGeometryApi::CreatrePolygon(vertexCount);
+
+
+        vertices = poly.vertices;
+
+
+        }
+
+        if (!vertices.empty()) {
+            auto triangles = CalcGeometryApi::Delane(vertices);
+            // Передаем vertexCount дальше в визуализацию
+            showDelaunayVisualization(vertices, triangles, vertexCount);
+        }
+    });
+
+    showSettings(dialog);
 }
 
+// Добавили параметр int vertexCount в сигнатуру метода
 void MainWindow::showDelaunayVisualization(const std::vector<Point2D>& vertices,
-											const std::vector<Triangle>& triangles)
+                                           const std::vector<Triangle>& triangles,
+                                           int vertexCount)
 {
-	auto *widget     = new VisualizationWidget();
-	auto *controller = new DelaunayController(
-		widget->view(), widget->scene(), vertices, triangles);
+    auto *widget     = new VisualizationWidget();
+    // Передаем параметр vertexCount в конструктор контроллера
+    auto *controller = new DelaunayController(
+        widget->view(), widget->scene(), vertices, triangles, vertexCount);
 
-	auto *toggleBtn = new QPushButton(tr("Показать Вороного"), widget);
-	toggleBtn->setCursor(Qt::PointingHandCursor);
+    auto *toggleBtn = new QPushButton(tr("Показать Вороного"), widget);
+    toggleBtn->setCursor(Qt::PointingHandCursor);
 
-	connect(toggleBtn, &QPushButton::clicked, this, [controller, toggleBtn]() {
-		controller->toggleMode();
-		toggleBtn->setText(controller->isShowingVoronoi()
-						   ? tr("Показать Делоне")
-						   : tr("Показать Вороного"));
-	});
+    connect(toggleBtn, &QPushButton::clicked, this, [controller, toggleBtn]() {
+        controller->toggleMode();
+        toggleBtn->setText(controller->isShowingVoronoi()
+                           ? tr("Показать Делоне")
+                           : tr("Показать Вороного"));
+    });
 
-	widget->addCustomButton(toggleBtn);
-	widget->addBackButton();
-	widget->finalizeSetup();
+    widget->addCustomButton(toggleBtn);
+    widget->addBackButton();
+    widget->finalizeSetup();
 
-	connect(widget, &VisualizationWidget::backPressed,
-			this, &MainWindow::returnToMainMenu);
+    connect(widget, &VisualizationWidget::backPressed,
+            this, &MainWindow::returnToMainMenu);
 
-	stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
-	stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
+    stack_->insertWidget(static_cast<int>(PageIndex::Visualization), widget);
+    stack_->setCurrentIndex(static_cast<int>(PageIndex::Visualization));
 }
 
 void MainWindow::showPolygonSettings()

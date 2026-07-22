@@ -36,8 +36,9 @@ private slots:
 
     void returnToMainMenu();
 	void showDelaunaySettings();
-	void showDelaunayVisualization(const std::vector<Point2D>& vertices, const std::vector<Triangle>& triangles);
-
+void showDelaunayVisualization(const std::vector<Point2D>& vertices,
+                               const std::vector<Triangle>& triangles,
+                               int vertexCount = 0);
 private:
     void createStartMenu();
     void showSettings(QWidget* settingsDialog);
