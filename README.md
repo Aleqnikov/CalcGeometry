@@ -1,163 +1,98 @@
 # Вычислительная геометрия
 
-Учебный C++/Qt-проект для визуализации и исследования классических алгоритмов вычислительной геометрии.
+Учебный C++/Qt-проект: алгоритмы вычислительной геометрии и их интерактивная визуализация.
 
-Проект состоит из графического интерфейса (Qt) и алгоритмической библиотеки, разделённых по слоям.
+Проект разделён на два слоя — графический интерфейс (`gui/`) и алгоритмическая библиотека (`lib/`). GUI зависит от библиотеки, обратной зависимости нет.
 
----
 
-## Возможности
 
-Приложение реализует и визуализирует следующие задачи:
+## Сборка и запуск
 
-### Многоугольники
-- Проверка принадлежности точки:
-    - произвольному многоугольнику (Ray Casting)
-    - выпуклому многоугольнику
-    - звёздчатому многоугольнику
+Всё собирается и запускается из `gui/` — это единственная точка входа, библиотека подключается через `gui.pro`.
 
-### Выпуклая оболочка
-- Алгоритм Джарвиса (Jarvis March)
-- Алгоритм Эндрюса (Monotone Chain)
+**Требования:** C++17, Qt 5.15, qmake.
 
-### Триангуляция
-- Алгоритм Ear Clipping
-- Загрузка полигона из JSON-файла
+### Qt Creator
 
-### Диаметр множества точек
-- Наивный алгоритм `O(n²)`
-- Rotating Calipers
-- Через выпуклую оболочку
+Открыть `gui/gui.pro`, выбрать комплект Qt 5.15 и нажать «Запустить».
 
-### Ограничивающие множества
-- Минимальный описывающий прямоугольник (Rotating Calipers)
-- Минимальная описывающая окружность:
-    - наивный алгоритм
-    - алгоритм Вельцля (Welzl)
-
-Все алгоритмы сопровождаются интерактивной визуализацией.
-
----
-
-## Архитектура проекта
-
-### GUI (Qt)
-
-Папка: `gui/`
-
-- `MainWindow` — главное меню и навигация
-- `SettingsDialog` — окна ввода параметров
-- `VisualizationWidget` — визуализация сцен
-- `Controllers` — связывают алгоритмы и представление
-- `jsonparcer.h` — загрузка контуров из JSON
-
-Используются:
-- `QMainWindow`
-- `QStackedWidget`
-- `QGraphicsView / QGraphicsScene`
-
----
-
-### Алгоритмическая библиотека
-
-Папка: `lib/`
-
-#### API-слой
-`lib/api/GeometryApi.h`
-
-Единая точка доступа для GUI:
-```cpp
-CalcGeometryApi::CreatrePolygon(int);
-CalcGeometryApi::CreateHull(int);
-CalcGeometryApi::EarClipping(std::vector<Point2D>);
-CalcGeometryApi::WelzAlg(std::vector<Point2D>);
-```
-
-# Линейная алгебра
-
-`lib/src/linalgebra/`
-
-- `Point2D`
-- ориентация точек
-- расстояния
-- скалярное и псевдоскалярное произведение
-- принадлежность треугольнику
-
-# Геометрия
-
-## Многоугольники
-
-- `Polygon`
-- `ConvexPolygon`
-- `StarPolygon`
-- алгоритмы `point-in-polygon`
-
-## Выпуклая оболочка
-
-- Jarvis March
-- Andrews
-- Graham Scan
-
-## Триангуляция
-
-- Ear Clipping (через списки вершин)
-
-## Ограничивающие множества
-
-- диаметр множества точек
-- минимальный прямоугольник
-- минимальная окружность
-
-# Формат JSON (триангуляция)
-
-```json
-{
-  "points": [
-    [0, 0],
-    [4, 0],
-    [4, 3],
-    [0, 3]
-  ]
-}
-```
-
-- Контур автоматически приводится к ориентации против часовой стрелки (CCW)
-- Проверяется вырождение полигона
-
----
-
-# Сборка и запуск
-
-## Требования
-
-- C++17
-- Qt 5 / Qt 6
-- CMake или Qt Creator
-
-## Сборка
+### Командная строка
 
 ```bash
-mkdir build
-cd build
-cmake ..
+cd gui
+mkdir -p build && cd build
+qmake ..
 make
 ```
 
-- Или открыть проект напрямую в **Qt Creator**
+Запуск собранного приложения:
+
+```bash
+./gui.app/Contents/MacOS/gui   # macOS
+./gui                          # Linux
+```
+
 
 ---
 
-# Назначение проекта
+## Структура проекта
 
-- Учебный проект по курсу «Вычислительная геометрия»
-- Демонстрация работы алгоритмов на практике
-- Основа для дальнейшего расширения и экспериментов
+```
+.
+├── gui/                        # Qt-приложение (точка сборки и запуска)
+│   ├── gui.pro                 # файл проекта qmake
+│   ├── main.cpp
+│   ├── mainwindow.{h,cpp}      # главное меню и навигация между экранами
+│   ├── jsonparcer.h            # загрузка контуров из JSON
+│   ├── views/
+│   │   ├── NavigationView.h        # QGraphicsView с зумом и панорамированием
+│   │   └── VisualizationWidget.{h,cpp}
+│   ├── dialogs/                # окна ввода параметров для каждой задачи
+│   │   ├── SettingsDialog.{h,cpp}      # базовый диалог
+│   │   ├── PolygonSettingsDialog.{h,cpp}
+│   │   ├── HullSettingsDialog.{h,cpp}
+│   │   ├── TriangulationSettingsDialog.{h,cpp}
+│   │   ├── DelaunaySettingsDialog.{h,cpp}
+│   │   ├── DiameterSettingsDialog.{h,cpp}
+│   │   ├── RectangleSettingsDialog.{h,cpp}
+│   │   └── CircleSettingsDialog.{h,cpp}
+│   └── controllers/            # связывают алгоритмы из lib/ со сценой
+│       ├── BaseController.{h,cpp}      # общая отрисовка, обработка клавиш
+│       ├── PolygonController.{h,cpp}
+│       ├── HullController.{h,cpp}
+│       ├── TriangulationController.{h,cpp}
+│       ├── DelaunayController.{h,cpp}  # Делоне / Вороной, переключение режимов
+│       ├── DiameterController.{h,cpp}
+│       ├── RectangleController.{h,cpp}
+│       └── CircleController.{h,cpp}
+│
+└── lib/                        # алгоритмическая часть, без зависимостей от Qt
+    ├── api/
+    │   └── GeometryApi.{h,cpp}         # единая точка доступа для GUI
+    └── src/
+        ├── linalgebra/
+        │   ├── Point2D.h
+        │   └── LinAl.{h,cpp}           # ориентация, расстояния, произведения
+        └── geometry/
+            ├── polygons/
+            │   ├── core/               # Polygon, ConvexPn, StarPn
+            │   └── algorithms/         # point_in_polygon
+            ├── convexhull/
+            │   ├── core/               # Hull
+            │   └── algorithms/         # HullAlgorithms
+            ├── triangulation/
+            │   └── algorithms/         # TriangulationAlgorithms (Ear Clipping)
+            ├── delone/
+            │   └── algorithm/
+            │       ├── DCEL.h, Dcel.cpp                # рёберный список
+            │       ├── Delaunaytree.{h,cpp}            # локализация точки
+            │       ├── Delaunaytriangulation.{h,cpp}   # инкрементальный алгоритм
+            │       └── VoronoiFromDelaunay.{h,cpp}     # диаграмма Вороного
+            └── boundingsets/
+                └── algorithms/         # DiameterAlgorithms,
+                                        # BoundingRectangle, BoundingCircle
+```
+
+Каждый модуль в `lib/src/geometry/` разделён на `core/` (структуры данных) и `algorithms/` (алгоритмы над ними).
 
 ---
-
-# Примечания
-
-- Все алгоритмы реализованы вручную
-- Сторонние геометрические библиотеки не используются
-- Генерация входных данных выполняется случайным образом
-
